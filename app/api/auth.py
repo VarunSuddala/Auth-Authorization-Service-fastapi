@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException,status
+from fastapi import APIRouter, Depends, HTTPException,status,Query
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.schemas.user_schema import UserRegister,UserResponse,UserLogin,TokenResponse
 from app.services.auth_service import register_user,login_user
-
+from app.api.deps import get_current_user
+from app.models.user import User
+from app.core.security import verify_access_token
 router =APIRouter(prefix="/auth", tags=["authentication"])
 
 
@@ -23,3 +25,21 @@ def loginUser(user:UserLogin,db:Session=Depends(get_db)):
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid email or password")
     return token
+
+
+@router.get("/me")
+def get_me(token: str = Query(...), db: Session = Depends(get_db)):
+    payload = verify_access_token(token)
+
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user_id = payload.get("sub")
+    user = db.query(User).filter(User.id == int(user_id)).first()
+
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "role": user.role
+    }
