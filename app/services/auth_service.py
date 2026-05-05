@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.models.user import User
-from app.schemas.user_schema import UserRegister
+from app.schemas.user_schema import UserRegister,UserLogin
 from app.core.security import hash_password
+from app.core.security import verify_password,Create_token
 
 def register_user(db: Session, user_data: UserRegister) -> User:
     existing_user = db.query(User).filter(User.email == user_data.email).first()
@@ -22,3 +23,23 @@ def register_user(db: Session, user_data: UserRegister) -> User:
     except IntegrityError:
         db.rollback()
         return None
+    
+def login_user(data:UserLogin,db:Session):
+    existing_user=db.query(User).filter(User.email==data.email).first()
+    if not existing_user:return None
+
+    if not verify_password(data.password,existing_user.hashed_password):
+        return None
+    
+    token=Create_token(
+        {
+            "sub":str(existing_user.id),
+            "email":existing_user.email,
+            "role":existing_user.role
+        }
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
