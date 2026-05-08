@@ -13,12 +13,33 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def Create_token(data:dict):
     encode_data=data.copy()
     expire= datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    encode_data.update({"exp":expire})
+    encode_data.update({"exp":expire, "type": "access"})
 
     encode_jwt=jwtEncode(encode_data,
                          settings.SECRET_KEY,
                          algorithm=settings.ALGORITHM)
     return encode_jwt
+
+def Create_refresh_token(data:dict):
+    to_encode=data.copy()
+    expire=datetime.utcnow()+timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update(
+        {
+            "exp":expire,
+            "type":"refresh"
+        }
+    )
+
+    refresh_token=jwtEncode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+
+    )
+
+    return refresh_token
+
+
 def verify_access_token(token:str):
     try:
         playload=jwtDecode(
@@ -29,3 +50,4 @@ def verify_access_token(token:str):
         return playload
     except JWTError:
         return None
+
