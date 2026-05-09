@@ -1,5 +1,5 @@
 from app.db.database import session_local
-from sqlalchemy.orm import session
+from sqlalchemy.orm import Session
 from app.models.user import User
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends,HTTPException,status
@@ -15,17 +15,27 @@ def get_db():
     finally:
         db.close()
 
-def get_current_user(token:str = Depends(Oauth2_schema),db:session=Depends(get_db)):
+def get_current_user(
+    token: str = Depends(Oauth2_schema),
+    db: Session = Depends(get_db)
+):
+    payload = verify_access_token(token)
 
-    payload=verify_access_token(token)
     if payload is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
-    
-    user_id=int(payload.get("sub"))
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
 
-    user=db.query(User).filter(user_id==User.id).first()
+    user_id = payload.get("sub")
+
+    user = db.query(User).filter(User.id == int(user_id)).first()
 
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
     
     return user
+

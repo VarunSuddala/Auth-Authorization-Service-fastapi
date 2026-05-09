@@ -6,6 +6,7 @@ from app.services.auth_service import register_user,login_user
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.core.security import verify_access_token
+from fastapi.security import OAuth2PasswordRequestForm
 
 router =APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -19,7 +20,7 @@ def CreateUser(user:UserRegister,db:Session=Depends(get_db)):
     return new_user
 
 @router.post("/login",response_model=TokenResponse)
-def loginUser(user:UserLogin,db:Session=Depends(get_db)):
+def loginUser(user:OAuth2PasswordRequestForm = Depends(),db:Session=Depends(get_db)):
 
     token=login_user(user,db)
      
@@ -29,7 +30,8 @@ def loginUser(user:UserLogin,db:Session=Depends(get_db)):
 
 
 @router.get("/me")
-def get_me(user: User = Depends(get_current_user)):
+def get_me(user:User = Depends(get_current_user)):
+
     return {
         "id": user.id,
         "full_name": user.full_name,
