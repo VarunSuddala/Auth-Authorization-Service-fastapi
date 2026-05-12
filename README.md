@@ -1,69 +1,60 @@
-# Auth & Authorization Service (FastAPI)
+# Auth & Authorization Service — FastAPI
 
-A production-grade authentication and authorization backend built with FastAPI.
-Designed with scalable architecture, security best practices, and real-world backend patterns.
+A production-ready authentication and authorization backend built with FastAPI, PostgreSQL, and JWT tokens. Designed with a clean layered architecture and real-world security practices.
 
 ---
 
 ## Features
 
-### Implemented (Day 1)
-
-* User Registration API
-* Password Hashing using bcrypt (via passlib)
-* PostgreSQL Database Integration
-* SQLAlchemy ORM
-* Pydantic v2 Validation
-* Clean Modular Architecture (Controller → Service → DB)
-
-###  Upcoming (Roadmap)
-
-* JWT Authentication (Access + Refresh Tokens)
-* Role-Based Access Control (RBAC)
-* Email Verification System
-* Password Reset Flow
-* Token Blacklisting / Logout
-* Audit Logging
-* Docker Deployment
+- User registration with strong password validation
+- JWT access tokens + refresh tokens
+- Refresh token stored in DB and validated on use
+- Token type enforcement (access vs refresh tokens are separate)
+- Secure logout (refresh token invalidated in DB)
+- Role-based user model (`user` / `admin`)
+- Protected routes via OAuth2 Bearer scheme
+- CORS middleware configured
+- Pydantic v2 request/response validation
+- SQLAlchemy 2.x ORM with PostgreSQL
 
 ---
 
-##  Architecture
+## Project Structure
 
 ```
-API Layer → Service Layer → Database Layer → Security Layer
-```
-
-###  Project Structure
-
-```
-auth_service/
-│
-├── app/
-│   ├── main.py
-│   ├── core/          # config, security
-│   ├── db/            # database connection
-│   ├── models/        # SQLAlchemy models
-│   ├── schemas/       # Pydantic schemas
-│   ├── api/           # routes/controllers
-│   ├── services/      # business logic
-│   ├── utils/         # helpers
-│
-├── .env
-├── requirements.txt
-├── README.md
+app/
+├── main.py               # App entry point, lifespan, CORS
+├── api/
+│   ├── auth.py           # Route handlers
+│   └── deps.py           # Dependency injection (get_db, get_current_user)
+├── core/
+│   ├── config.py         # Settings from .env
+│   └── security.py       # Hashing, JWT create/verify
+├── db/
+│   └── database.py       # SQLAlchemy engine + session
+├── models/
+│   └── user.py           # User ORM model
+├── schemas/
+│   └── user_schema.py    # Pydantic schemas
+├── services/
+│   └── auth_service.py   # Business logic
+└── utils/
+    └── helpers.py
 ```
 
 ---
 
-##  Tech Stack
+## Tech Stack
 
-* FastAPI
-* PostgreSQL
-* SQLAlchemy
-* Pydantic v2
-* Passlib (bcrypt)
-* python-jose (JWT - upcoming)
+| Layer | Technology |
+|---|---|
+| Framework | FastAPI |
+| Database | PostgreSQL |
+| ORM | SQLAlchemy 2.x |
+| Validation | Pydantic v2 |
+| Password Hashing | passlib (bcrypt) |
+| JWT | python-jose |
+| Server | Uvicorn |
 
 ---
 
@@ -73,119 +64,166 @@ auth_service/
 git clone https://github.com/VarunSuddala/Auth-Authorization-Service-fastapi.git
 cd Auth-Authorization-Service-fastapi
 
+# Create and activate virtual environment
 python -m venv venv
+
+# Windows
 venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
 
 pip install -r requirements.txt
 ```
 
 ---
 
-##  Environment Variables
+## Environment Variables
 
-Create a `.env` file:
+Create a `.env` file in the project root:
 
 ```env
 DATABASE_URL=postgresql://postgres:yourpassword@localhost/authdb
-SECRET_KEY=your_secret_key
+SECRET_KEY=your-secret-key-here
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
 
 ---
 
-##  Run the Server
+## Run the Server
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
----
-
-##  API Documentation
-
-FastAPI provides built-in interactive docs:
-
-```
-http://127.0.0.1:8000/docs
-```
+Interactive API docs available at `http://127.0.0.1:8000/docs`
 
 ---
 
-##  API Endpoints
+## API Endpoints
 
-###  POST `/auth/register`
+### `POST /auth/register`
 
-Registers a new user.
+Register a new user.
 
-#### Request:
-
+**Request:**
 ```json
 {
-  "full_name": "Varun",
-  "email": "varun@gmail.com",
-  "password": "secure123"
+  "full_name": "Varun Suddala",
+  "email": "varun@example.com",
+  "password": "Secure@123"
 }
 ```
 
-#### Response:
+Password rules: min 8 characters, must include uppercase, lowercase, number, and special character (`!@#$%^&*`).
 
+**Response `201`:**
 ```json
 {
   "id": 1,
-  "full_name": "Varun",
-  "email": "varun@gmail.com",
+  "full_name": "Varun Suddala",
+  "email": "varun@example.com",
   "role": "user"
 }
 ```
 
-#### Error:
+---
 
+### `POST /auth/login`
+
+Login with email and password (OAuth2 form).
+
+**Form fields:** `username` (email), `password`
+
+**Response `200`:**
 ```json
 {
-  "detail": "User with this email already exists"
+  "access_token": "<jwt>",
+  "refresh_token": "<jwt>",
+  "token_type": "bearer"
 }
 ```
 
 ---
 
-##  Security Notes
+### `GET /auth/me`
 
-* Passwords are hashed using bcrypt before storage
-* Plain text passwords are never stored
-* Validation is handled at schema level using Pydantic
-* Database constraints enforce uniqueness
+Get current authenticated user. Requires `Authorization: Bearer <access_token>` header.
 
----
----
-
-##  Motivation
-
-This project is part of a backend engineering roadmap focused on building real-world systems similar to authentication services used in:
-
-* Google (Account Authentication)
-* Amazon (Identity Services)
-* Netflix (User Authentication Backend)
+**Response `200`:**
+```json
+{
+  "id": 1,
+  "full_name": "Varun Suddala",
+  "email": "varun@example.com",
+  "role": "user"
+}
+```
 
 ---
 
-##  Future Improvements
+### `POST /auth/refresh`
 
-* Add Redis for token blacklisting
-* Add rate limiting
-* Add OAuth (Google Login)
-* Add CI/CD pipeline
+Get a new access token using a valid refresh token.
+
+**Request body:**
+```json
+{
+  "refresh_token": "<jwt>"
+}
+```
+
+**Response `200`:**
+```json
+{
+  "access_token": "<new_jwt>",
+  "refresh_token": "<same_refresh_jwt>",
+  "token_type": "bearer"
+}
+```
 
 ---
 
-##  Status
+### `POST /auth/logout`
 
- Actively under development — evolving into a full production-ready authentication system.
+Logout the current user. Invalidates the refresh token in the database. Requires `Authorization: Bearer <access_token>` header.
+
+**Response `200`:**
+```json
+{
+  "message": "Logout success"
+}
+```
 
 ---
 
-##  Author
+## Security Design
 
-**Varun Suddala**
+- Passwords hashed with bcrypt, plain text never stored
+- Access tokens expire in 30 minutes (configurable)
+- Refresh tokens expire in 7 days (configurable)
+- Token `type` field enforced — refresh tokens cannot be used as access tokens
+- Refresh token validated against DB on every use — invalidated at logout
+- All secrets loaded from environment variables, never hardcoded
 
 ---
+
+## Roadmap
+
+- [ ] Alembic database migrations
+- [ ] Email verification on registration
+- [ ] Password reset flow
+- [ ] Role-Based Access Control (RBAC) — admin routes
+- [ ] Redis for token blacklisting
+- [ ] Rate limiting
+- [ ] Docker + docker-compose setup
+- [ ] CI/CD pipeline
+- [ ] OAuth2 social login (Google)
+
+---
+
+## Author
+
+**Varun Suddala**  
+[GitHub](https://github.com/VarunSuddala)
