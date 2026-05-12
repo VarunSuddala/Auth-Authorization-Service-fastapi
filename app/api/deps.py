@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends,HTTPException,status
 from app.core.security import verify_access_token
 
-Oauth2_schema=OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme=OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_db():
     db=session_local()
@@ -16,7 +16,7 @@ def get_db():
         db.close()
 
 def get_current_user(
-    token: str = Depends(Oauth2_schema),
+    token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ):
     payload = verify_access_token(token)

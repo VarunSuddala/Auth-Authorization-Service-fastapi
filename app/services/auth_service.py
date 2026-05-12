@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models.user import User
 from app.schemas.user_schema import UserRegister,UserLogin
 from app.core.security import hash_password
-from app.core.security import verify_password,Create_token,Create_refresh_token
+from app.core.security import verify_password,create_token,create_refresh_token
 from fastapi.security import OAuth2PasswordRequestForm
 ###################################################################################
 def register_user(db: Session, user_data: UserRegister) -> User:
@@ -32,7 +32,7 @@ def login_user(data,db:Session):
     if not verify_password(data.password,existing_user.hashed_password):
         return None
     
-    token=Create_token(
+    token=create_token(
         {
             "sub":str(existing_user.id),
             "email":existing_user.email,
@@ -40,13 +40,35 @@ def login_user(data,db:Session):
         }
     )
 
-    refresh_token=Create_refresh_token(
+    refresh_token=create_refresh_token(
         {
             "sub":str(existing_user.id)
         }
         )
+    existing_user.refresh_token=refresh_token
+    db.commit()
+    db.refresh(existing_user)
     return {
         "access_token": token,
         "refresh_token":refresh_token,
         "token_type": "bearer"
     }
+
+def logout_user(db:Session,user_id:int):
+    user=db.query(User).filter(User.id==user_id).first()
+    if not user:return None
+    user.refresh_token=None
+    db.commit()
+    db.refresh(user)
+    return True
+
+
+def create_new_access_token(user,db:Session):
+    token=create_token(
+        {
+            "sub":str(user.id),
+            "email":user.email,
+            "role":user.role
+        }
+    )
+    return token

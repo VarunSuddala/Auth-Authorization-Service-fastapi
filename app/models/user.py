@@ -1,6 +1,6 @@
 from app.db.database import Base
 from sqlalchemy import Column,String,Integer,Boolean,DateTime
-from datetime import datetime
+from datetime import datetime,timezone
 
 class User(Base):
     __tablename__="users"
@@ -12,6 +12,6 @@ class User(Base):
     role = Column(String, default="user")
     is_verified = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    refresh_token=Column(String, nullable=True)
 
