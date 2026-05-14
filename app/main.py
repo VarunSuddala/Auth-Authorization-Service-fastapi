@@ -5,7 +5,12 @@ from app.models import user
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    Base.metadata.create_all(bind=Engine)
+    yield
+app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,11 +18,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.include_router(auth_api)
-@asynccontextmanager
-async def lifespan(app:FastAPI):
-    Base.metadata.create_all(bind=Engine)
-    yield
 
 @app.get("/")
 def root():
