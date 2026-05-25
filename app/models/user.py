@@ -15,7 +15,3 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     refresh_token=Column(String, nullable=True)
 
-    # Brute-force protection
-    failed_login_attempts = Column(Integer, default=0, nullable=False)
-    locked_until = Column(DateTime(timezone=True), nullable=True)   # null = not locked
-    last_failed_at = Column(DateTime(timezone=True), nullable=True)
